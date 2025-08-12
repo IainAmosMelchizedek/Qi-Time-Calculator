@@ -526,11 +526,18 @@
             
             // Calculate qi strength based on constitution and current time
             const constitution = constitutionTimings[selectedConstitution];
-            let qiStrength = calculateQiStrength(timeInMinutes, constitution.peakTimes);
+            let baseQiStrength = calculateQiStrength(timeInMinutes, constitution.peakTimes);
+            
+            // Apply lunar influence to qi strength
+            let finalQiStrength = baseQiStrength;
+            if (window.currentLunarData) {
+                const lunarMultiplier = calculateLunarInfluence(window.currentLunarData);
+                finalQiStrength = Math.min(100, baseQiStrength * lunarMultiplier);
+            }
             
             // Update qi field visualization
             const qiField = document.getElementById('qiField');
-            const strength = qiStrength / 100;
+            const strength = finalQiStrength / 100;
             
             // Adjust field size and intensity based on qi strength
             qiField.style.transform = `translate(-50%, -50%) scale(${0.8 + strength * 0.4})`;
@@ -543,8 +550,52 @@
             )`;
             
             // Update indicators
-            document.getElementById('qiStrength').textContent = Math.round(qiStrength) + '%';
-            document.getElementById('qiTrend').textContent = qiStrength > 70 ? '↗ Rising' : qiStrength > 40 ? '→ Stable' : '↘ Declining';
+            document.getElementById('qiStrength').textContent = Math.round(finalQiStrength) + '%';
+            document.getElementById('qiTrend').textContent = finalQiStrength > 70 ? '↗ Rising' : finalQiStrength > 40 ? '→ Stable' : '↘ Declining';
+        }
+
+        function calculateLunarInfluence(lunarData) {
+            // Calculate lunar influence multiplier based on real data
+            const illumination = lunarData.illumination;
+            const phase = lunarData.phase.toLowerCase();
+            
+            // Traditional TCM lunar influence factors
+            if (phase.includes('full')) {
+                return 1.3; // 30% boost during full moon (as mentioned in paper case studies)
+            } else if (phase.includes('new')) {
+                return 1.2; // 20% boost during new moon (high potential)
+            } else if (phase.includes('waxing')) {
+                return 1.0 + (illumination * 0.2); // Growing qi with moon
+            } else if (phase.includes('waning')) {
+                return 1.0 + ((1 - illumination) * 0.15); // Releasing qi
+            }
+            
+            return 1.0; // Base multiplier
+        }
+
+        function formatLunarDisplay(lunarData) {
+            const illuminationPercent = Math.round(lunarData.illumination * 100);
+            const age = Math.round(lunarData.age);
+            
+            let moonIcon;
+            const phase = lunarData.phase.toLowerCase();
+            if (phase.includes('new')) moonIcon = '🌑';
+            else if (phase.includes('waxing crescent')) moonIcon = '🌒';
+            else if (phase.includes('first quarter')) moonIcon = '🌓';
+            else if (phase.includes('waxing gibbous')) moonIcon = '🌔';
+            else if (phase.includes('full')) moonIcon = '🌕';
+            else if (phase.includes('waning gibbous')) moonIcon = '🌖';
+            else if (phase.includes('third quarter')) moonIcon = '🌗';
+            else if (phase.includes('waning crescent')) moonIcon = '🌘';
+            else moonIcon = '🌙';
+            
+            let qiInfluence;
+            if (phase.includes('full')) qiInfluence = '(Peak Qi Power!)';
+            else if (phase.includes('new')) qiInfluence = '(High Qi Potential)';
+            else if (phase.includes('waxing')) qiInfluence = '(Building Qi)';
+            else qiInfluence = '(Releasing Qi)';
+            
+            return `${lunarData.phase} ${moonIcon} ${qiInfluence} - ${illuminationPercent}% illuminated, ${age} days old`;
         }
 
         function calculateQiStrength(currentTimeMinutes, peakTimes) {
@@ -603,18 +654,64 @@
             updateQiField();
         }
 
-        function calculateLunarPhase() {
-            // Simplified lunar phase calculation
+        async function fetchRealLunarData() {
+            try {
+                // Get current Unix timestamp
+                const now = new Date();
+                const unixTimestamp = Math.floor(now.getTime() / 1000);
+                
+                // Fetch real lunar data from Farmsense API
+                const response = await fetch(`https://api.farmsense.net/v1/moonphases/?d=${unixTimestamp}`);
+                const lunarData = await response.json();
+                
+                if (lunarData && lunarData[0] && lunarData[0].Error === 0) {
+                    const moonData = lunarData[0];
+                    return {
+                        phase: moonData.Phase,
+                        illumination: moonData.Illumination,
+                        age: moonData.Age,
+                        distance: moonData.Distance,
+                        angularDiameter: moonData.AngularDiameter
+                    };
+                } else {
+                    throw new Error('API returned error');
+                }
+            } catch (error) {
+                console.log('Lunar API unavailable, using calculated data:', error);
+                return calculateFallbackLunarPhase();
+            }
+        }
+
+        function calculateFallbackLunarPhase() {
+            // Fallback calculation if API fails
             const now = new Date();
-            const lunarCycle = 29.53; // days
-            const knownNewMoon = new Date('2024-01-11'); // Known new moon date
+            const lunarCycle = 29.53;
+            const knownNewMoon = new Date('2024-01-11');
             const daysSince = (now - knownNewMoon) / (1000 * 60 * 60 * 24);
             const phase = (daysSince % lunarCycle) / lunarCycle;
             
-            if (phase < 0.125) return 'New Moon 🌑 (High Qi Potential)';
-            if (phase < 0.375) return 'Waxing Moon 🌒 (Building Qi)';
-            if (phase < 0.625) return 'Full Moon 🌕 (Peak Qi Power)';
-            return 'Waning Moon 🌘 (Releasing Qi)';
+            let phaseName, illumination;
+            if (phase < 0.125) {
+                phaseName = 'New Moon';
+                illumination = 0.05;
+            } else if (phase < 0.375) {
+                phaseName = 'Waxing Crescent';
+                illumination = 0.25;
+            } else if (phase < 0.625) {
+                phaseName = 'Full Moon';
+                illumination = 1.0;
+            } else {
+                phaseName = 'Waning Crescent';
+                illumination = 0.35;
+            }
+            
+            return {
+                phase: phaseName,
+                illumination: illumination,
+                age: (daysSince % lunarCycle),
+                distance: 384400, // Average distance
+                angularDiameter: 0.54
+            };
         }
 
         function calculateNextOptimalTime() {
@@ -649,7 +746,18 @@
 
         function refreshQiField() {
             updateQiField();
-            alert('Qi field recalculated based on current time and lunar phase!');
+            
+            // Also refresh lunar data
+            fetchRealLunarData().then(lunarData => {
+                window.currentLunarData = lunarData;
+                document.getElementById('lunarPhase').textContent = formatLunarDisplay(lunarData);
+                updateQiField(); // Update again with new lunar data
+                
+                const illuminationPercent = Math.round(lunarData.illumination * 100);
+                alert(`🌙 Qi field updated with live lunar data!\n\nCurrent Moon: ${lunarData.phase}\nIllumination: ${illuminationPercent}%\nLunar Age: ${Math.round(lunarData.age)} days\n\nQi electromagnetic field adjusted for real lunar magnetic influence!`);
+            }).catch(error => {
+                alert('Qi field recalculated! (Using fallback lunar data - API temporarily unavailable)');
+            });
         }
 
         function simulateIntegration() {
@@ -657,16 +765,35 @@
         }
 
         // Initialize
-        window.onload = function() {
+        window.onload = async function() {
             // Set Wood as default (matching user's tracker)
             selectConstitution('Wood');
             
-            // Update lunar phase
-            document.getElementById('lunarPhase').textContent = calculateLunarPhase();
+            // Fetch real lunar data
+            document.getElementById('lunarPhase').textContent = 'Loading real lunar data...';
+            
+            try {
+                window.currentLunarData = await fetchRealLunarData();
+                document.getElementById('lunarPhase').textContent = formatLunarDisplay(window.currentLunarData);
+                console.log('Real lunar data loaded:', window.currentLunarData);
+            } catch (error) {
+                document.getElementById('lunarPhase').textContent = 'Unable to load lunar data - using fallback';
+                console.error('Lunar data fetch failed:', error);
+            }
             
             // Start time updates
             updateCurrentTime();
             setInterval(updateCurrentTime, 60000); // Update every minute
+            
+            // Refresh lunar data every hour
+            setInterval(async () => {
+                try {
+                    window.currentLunarData = await fetchRealLunarData();
+                    document.getElementById('lunarPhase').textContent = formatLunarDisplay(window.currentLunarData);
+                } catch (error) {
+                    console.log('Hourly lunar update failed, keeping previous data');
+                }
+            }, 3600000); // Every hour
         };
     </script>
 </body>
