@@ -1,2 +1,5 @@
 # Qi-Time-Calculator
 Displays electromagnetic qi field visualizations and Calculates timing based on the chronoacupuncture principles. This is being built out. I understand that this calclator must include Solar data (sunrise/sunset, solar position); Seasonal qi adjustments based on the primary constitution; Star positions (traditional Chinese astronomical calculations); The 60-day chronoacupuncture cycle mentioned in the paper; and perhaps other info I'm not thinking about right now. 
+
+
+https://iainamosmelchizedek.github.io/Qi-Time-Calculator/
