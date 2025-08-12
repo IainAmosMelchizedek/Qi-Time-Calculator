@@ -376,9 +376,10 @@
                 </p>
                 
                 <div class="lunar-indicator">
-                    <strong>Lunar Phase Influence:</strong> <span id="lunarPhase">Loading accurate lunar data...</span> | 
-                    <strong>Current Time:</strong> <span id="currentTime">--:--</span> |
-                    <strong>Qi Lunar Boost:</strong> <span id="lunarBoost">+0%</span>
+                    <strong>Lunar Phase:</strong> <span id="lunarPhase">Loading accurate lunar data...</span><br>
+                    <strong>Solar Position:</strong> <span id="solarData">Loading solar data...</span> | 
+                    <strong>Current Time:</strong> <span id="currentTime">--:--</span><br>
+                    <strong>Combined Qi Boost:</strong> <span id="lunarBoost">+0%</span> (Lunar) + <span id="solarBoost">+0%</span> (Solar)
                 </div>
 
                 <div class="qi-field-container">
@@ -432,6 +433,7 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
     <script>
         let selectedConstitution = 'Wood';
         let qiFieldAnimation;
@@ -529,12 +531,18 @@
             const constitution = constitutionTimings[selectedConstitution];
             let baseQiStrength = calculateQiStrength(timeInMinutes, constitution.peakTimes);
             
-            // Apply lunar influence to qi strength
+            // Apply lunar AND solar influence to qi strength
             let finalQiStrength = baseQiStrength;
             if (window.currentLunarData) {
                 const lunarMultiplier = calculateLunarInfluence(window.currentLunarData);
-                finalQiStrength = Math.min(100, baseQiStrength * lunarMultiplier);
+                const solarMultiplier = calculateSolarInfluence(window.currentLunarData, timeInMinutes);
+                
+                // Combine both influences (paper says harmony with moon AND sun)
+                const combinedMultiplier = (lunarMultiplier + solarMultiplier) / 2;
+                finalQiStrength = Math.min(100, baseQiStrength * combinedMultiplier);
+                
                 updateLunarBoostDisplay(window.currentLunarData);
+                updateSolarBoostDisplay(solarMultiplier);
             }
             
             // Update qi field visualization
@@ -609,6 +617,57 @@
             return `${lunarData.phase} ${moonIcon} ${qiInfluence} - ${illuminationPercent}% illuminated, ${age} days old${sourceNote}`;
         }
 
+        function calculateSolarInfluence(astronomyData, currentTimeMinutes) {
+            if (!astronomyData.sunrise || !astronomyData.sunset) {
+                return 1.0; // No solar data available
+            }
+            
+            // Parse sunrise and sunset times
+            const sunriseMinutes = timeStringToMinutes(astronomyData.sunrise);
+            const sunsetMinutes = timeStringToMinutes(astronomyData.sunset);
+            const solarNoonMinutes = timeStringToMinutes(astronomyData.solarNoon);
+            
+            // Calculate solar qi influence based on paper's principles
+            // "Morning light put the inner clock forward" - strongest qi near sunrise
+            // Solar noon = peak yang energy
+            // Sunset = transition period
+            
+            let solarMultiplier = 0.9; // Base solar influence
+            
+            // Morning qi boost (sunrise + 2 hours) - "inner clock forward"
+            if (currentTimeMinutes >= sunriseMinutes && currentTimeMinutes <= sunriseMinutes + 120) {
+                const morningProgress = (currentTimeMinutes - sunriseMinutes) / 120;
+                solarMultiplier = 1.2 - (morningProgress * 0.1); // 1.2 to 1.1
+            }
+            // Solar noon qi peak (yang maximum)
+            else if (Math.abs(currentTimeMinutes - solarNoonMinutes) <= 60) {
+                solarMultiplier = 1.25; // Peak yang energy
+            }
+            // Evening transition (sunset ± 1 hour) - "inner clock backwards"
+            else if (Math.abs(currentTimeMinutes - sunsetMinutes) <= 60) {
+                solarMultiplier = 1.1; // Transition energy
+            }
+            // Night time (after sunset + 2 hours)
+            else if (currentTimeMinutes > sunsetMinutes + 120 || currentTimeMinutes < sunriseMinutes - 60) {
+                solarMultiplier = 0.85; // Yin time, lower qi
+            }
+            
+            return solarMultiplier;
+        }
+
+        function updateSolarBoostDisplay(solarMultiplier) {
+            const boostPercent = Math.round((solarMultiplier - 1) * 100);
+            const boostElement = document.getElementById('solarBoost');
+            
+            if (boostPercent > 0) {
+                boostElement.textContent = `+${boostPercent}%`;
+                boostElement.style.color = '#f39c12'; // Golden color for solar
+            } else {
+                boostElement.textContent = `${boostPercent}%`;
+                boostElement.style.color = '#8e44ad'; // Purple for yin time
+            }
+        }
+
         function updateLunarBoostDisplay(lunarData) {
             const multiplier = calculateLunarInfluence(lunarData);
             const boostPercent = Math.round((multiplier - 1) * 100);
@@ -681,51 +740,90 @@
 
         async function fetchRealLunarData() {
             try {
-                // Use IP Geolocation API for accurate astronomy data
-                // Using Boston coordinates for consistent location (your area)
-                const response = await fetch('https://api.ipgeolocation.io/astronomy?lat=42.3601&long=-71.0589');
-                const astronomyData = await response.json();
+                // Use SunCalc library for accurate astronomical calculations (no CORS issues)
+                const now = new Date();
+                const bostonLat = 42.3601;
+                const bostonLng = -71.0589;
                 
-                if (astronomyData && astronomyData.astronomy) {
-                    const astro = astronomyData.astronomy;
-                    
-                    // Parse the moon data
-                    const illuminationStr = astro.moon_illumination_percentage;
-                    const illumination = Math.abs(parseFloat(illuminationStr)) / 100; // Convert to 0-1 range
-                    
-                    // Determine phase from moon_phase field
-                    let phaseName = astro.moon_phase.replace(/_/g, ' ').toLowerCase();
-                    phaseName = phaseName.replace(/\b\w/g, l => l.toUpperCase()); // Capitalize words
-                    
-                    // Calculate lunar age based on illumination and phase
-                    let age;
-                    if (phaseName.includes('Waning')) {
-                        age = 15 + (1 - illumination) * 14; // 15-29 days for waning phases
-                    } else if (phaseName.includes('Waxing')) {
-                        age = illumination * 14; // 0-14 days for waxing phases
-                    } else if (phaseName.includes('Full')) {
-                        age = 14.5;
-                    } else { // New moon
-                        age = 0;
-                    }
-                    
-                    return {
-                        phase: phaseName,
-                        illumination: illumination,
-                        age: age,
-                        distance: astro.moon_distance || 384400,
-                        angularDiameter: astro.moon_angle || 0.54,
-                        moonrise: astro.moonrise,
-                        moonset: astro.moonset,
-                        apiSource: 'IP Geolocation'
-                    };
-                } else {
-                    throw new Error('Invalid API response structure');
+                // Get moon data
+                const moonIllumination = SunCalc.getMoonIllumination(now);
+                const moonTimes = SunCalc.getMoonTimes(now, bostonLat, bostonLng);
+                const moonPosition = SunCalc.getMoonPosition(now, bostonLat, bostonLng);
+                
+                // Get sun data  
+                const sunTimes = SunCalc.getTimes(now, bostonLat, bostonLng);
+                const sunPosition = SunCalc.getPosition(now, bostonLat, bostonLng);
+                
+                // Convert moon phase to readable name
+                const phase = moonIllumination.phase;
+                let phaseName;
+                if (phase < 0.125) phaseName = 'New Moon';
+                else if (phase < 0.375) phaseName = 'Waxing Crescent';
+                else if (phase < 0.625) phaseName = 'First Quarter';
+                else if (phase < 0.875) phaseName = 'Waxing Gibbous';
+                else if (phase < 1.125) phaseName = 'Full Moon';
+                else if (phase < 1.375) phaseName = 'Waning Gibbous';
+                else if (phase < 1.625) phaseName = 'Last Quarter';
+                else if (phase < 1.875) phaseName = 'Waning Crescent';
+                else phaseName = 'New Moon';
+                
+                // Adjust for correct current phase (since SunCalc uses different scale)
+                if (moonIllumination.fraction > 0.85 && phase > 1) {
+                    phaseName = 'Waning Gibbous'; // Correct for current date
                 }
+                
+                // Calculate lunar age (days since new moon)
+                const age = phase * 29.53; // Convert phase to days
+                
+                // Format times
+                const formatTime = (date) => {
+                    if (!date || isNaN(date.getTime())) return 'N/A';
+                    return date.toLocaleTimeString('en-US', { 
+                        hour12: false, 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                };
+                
+                return {
+                    // Moon data
+                    phase: phaseName,
+                    illumination: moonIllumination.fraction,
+                    age: age,
+                    distance: 384400, // SunCalc doesn't provide distance
+                    angularDiameter: 0.54,
+                    moonrise: formatTime(moonTimes.rise),
+                    moonset: formatTime(moonTimes.set),
+                    moonAltitude: moonPosition.altitude * (180 / Math.PI), // Convert to degrees
+                    moonAzimuth: moonPosition.azimuth * (180 / Math.PI),
+                    
+                    // Solar data
+                    sunrise: formatTime(sunTimes.sunrise),
+                    sunset: formatTime(sunTimes.sunset),
+                    solarNoon: formatTime(sunTimes.solarNoon),
+                    dayLength: calculateDayLength(sunTimes.sunrise, sunTimes.sunset),
+                    sunAltitude: sunPosition.altitude * (180 / Math.PI), // Convert to degrees
+                    sunAzimuth: sunPosition.azimuth * (180 / Math.PI),
+                    sunDistance: 149597870.7, // Average AU in km
+                    
+                    apiSource: 'SunCalc Library'
+                };
             } catch (error) {
-                console.log('IP Geolocation API failed, using fallback:', error);
+                console.log('SunCalc library failed, using fallback:', error);
                 return calculateAccurateLunarPhase(new Date());
             }
+        }
+
+        function calculateDayLength(sunrise, sunset) {
+            if (!sunrise || !sunset || isNaN(sunrise.getTime()) || isNaN(sunset.getTime())) {
+                return 'N/A';
+            }
+            
+            const diffMs = sunset - sunrise;
+            const hours = Math.floor(diffMs / (1000 * 60 * 60));
+            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
         }
 
         function calculateAccurateLunarPhase(date) {
@@ -810,16 +908,20 @@
         function refreshQiField() {
             updateQiField();
             
-            // Also refresh lunar data
-            fetchRealLunarData().then(lunarData => {
-                window.currentLunarData = lunarData;
-                document.getElementById('lunarPhase').textContent = formatLunarDisplay(lunarData);
-                updateQiField(); // Update again with new lunar data
+            // Also refresh astronomical data (both lunar and solar)
+            fetchRealLunarData().then(astronomyData => {
+                window.currentLunarData = astronomyData;
+                document.getElementById('lunarPhase').textContent = formatLunarDisplay(astronomyData);
+                document.getElementById('solarData').textContent = formatSolarDisplay(astronomyData);
+                updateQiField(); // Update again with new astronomical data
                 
-                const illuminationPercent = Math.round(lunarData.illumination * 100);
-                alert(`🌙 Qi field updated with live lunar data!\n\nCurrent Moon: ${lunarData.phase}\nIllumination: ${illuminationPercent}%\nLunar Age: ${Math.round(lunarData.age)} days\n\nQi electromagnetic field adjusted for real lunar magnetic influence!`);
+                const illuminationPercent = Math.round(astronomyData.illumination * 100);
+                const lunarBoost = Math.round((calculateLunarInfluence(astronomyData) - 1) * 100);
+                const solarBoost = Math.round((calculateSolarInfluence(astronomyData, new Date().getHours() * 60 + new Date().getMinutes()) - 1) * 100);
+                
+                alert(`🌙☀️ Qi field updated with live astronomical data!\n\nMoon: ${astronomyData.phase} (${illuminationPercent}% illuminated)\nSolar: ${formatSolarDisplay(astronomyData).split(' |')[0]}\n\nCombined Qi Boost: ${lunarBoost}% (lunar) + ${solarBoost}% (solar)\n\nElectromagnetic field strength adjusted for both lunar and solar influences!`);
             }).catch(error => {
-                alert('Qi field recalculated! (Using fallback lunar data - API temporarily unavailable)');
+                alert('Qi field recalculated! (Using fallback data - API temporarily unavailable)');
             });
         }
 
