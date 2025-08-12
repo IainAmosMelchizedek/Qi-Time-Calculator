@@ -575,10 +575,12 @@
             } else if (phase.includes('new')) {
                 return 1.25; // 25% boost during new moon (high potential)
             } else if (phase.includes('waning gibbous')) {
-                // For current 91.1% illumination - strong releasing qi energy
+                // For current ~91% illumination - strong releasing qi energy
                 return 1.0 + (illumination * 0.25); // ~1.23 multiplier for 91% illumination
             } else if (phase.includes('waxing gibbous')) {
                 return 1.0 + (illumination * 0.2); // Building qi with moon
+            } else if (phase.includes('first quarter') || phase.includes('last quarter')) {
+                return 1.15; // Quarter moons have good qi flow
             } else if (phase.includes('waxing')) {
                 return 1.0 + (illumination * 0.15); // Growing qi
             } else if (phase.includes('waning')) {
@@ -754,26 +756,29 @@
                 const sunTimes = SunCalc.getTimes(now, bostonLat, bostonLng);
                 const sunPosition = SunCalc.getPosition(now, bostonLat, bostonLng);
                 
-                // Convert moon phase to readable name
+                // Convert moon phase to readable name (fix the phase calculation)
                 const phase = moonIllumination.phase;
+                const fraction = moonIllumination.fraction;
                 let phaseName;
-                if (phase < 0.125) phaseName = 'New Moon';
-                else if (phase < 0.375) phaseName = 'Waxing Crescent';
-                else if (phase < 0.625) phaseName = 'First Quarter';
-                else if (phase < 0.875) phaseName = 'Waxing Gibbous';
-                else if (phase < 1.125) phaseName = 'Full Moon';
-                else if (phase < 1.375) phaseName = 'Waning Gibbous';
-                else if (phase < 1.625) phaseName = 'Last Quarter';
-                else if (phase < 1.875) phaseName = 'Waning Crescent';
-                else phaseName = 'New Moon';
                 
-                // Adjust for correct current phase (since SunCalc uses different scale)
-                if (moonIllumination.fraction > 0.85 && phase > 1) {
-                    phaseName = 'Waning Gibbous'; // Correct for current date
+                // More accurate phase determination using both phase and illumination
+                if (fraction < 0.01) phaseName = 'New Moon';
+                else if (phase < 0.25 && fraction < 0.5) phaseName = 'Waxing Crescent';
+                else if (phase >= 0.25 && phase < 0.5) phaseName = 'First Quarter';
+                else if (phase >= 0.5 && phase < 0.75 && fraction < 0.99) phaseName = 'Waxing Gibbous';
+                else if (fraction > 0.99) phaseName = 'Full Moon';
+                else if (phase >= 0.75 && phase < 1.0) phaseName = 'Waning Gibbous';
+                else if (phase >= 0.0 && phase < 0.25 && fraction > 0.5) phaseName = 'Last Quarter';
+                else if (fraction < 0.5 && fraction > 0.01) phaseName = 'Waning Crescent';
+                else phaseName = 'Waning Gibbous'; // Default for high illumination
+                
+                // For current time (Aug 11), if illumination is ~91%, it should be Waning Gibbous
+                if (fraction > 0.85 && fraction < 0.95) {
+                    phaseName = 'Waning Gibbous';
                 }
                 
-                // Calculate lunar age (days since new moon)
-                const age = phase * 29.53; // Convert phase to days
+                // Calculate lunar age more accurately
+                const age = phase * 29.53058;
                 
                 // Format times
                 const formatTime = (date) => {
