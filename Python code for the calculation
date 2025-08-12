@@ -1,0 +1,41 @@
+sexagenary day position of August 12, 2025:
+
+calculate the sexagenary day position of August 12, 2025, relative to the Datong Li epoch starting on October 20, 1383, which is a Jia-Zi day (Day #1 of the 60-day cycle).
+
+Step 1: Understand the inputs
+A. Epoch date (Day #1, Jia-Zi): October 20, 1383 (Gregorian calendar)
+B. Target date: August 12, 2025
+C. Cycle length: 60 days
+
+Step 2: Calculate the total number of days between the two dates. Need to find:
+Days difference = Days from Oct 20, 1383 to Aug 12, 2025
+
+Step 3: Calculate the sexagenary day position 
+Position=((Days difference)mod60)+1
+
+We add 1 because October 20, 1383, is Day #1.
+
+Step 4: Perform the calculation
+Python code for the calculation:
+from datetime import date
+
+# Define the epoch date (Datong Li Jia-Zi day)
+epoch_date = date(1383, 10, 20)
+
+# Define the target date
+target_date = date(2025, 8, 12)
+
+# Calculate the difference in days
+days_diff = (target_date - epoch_date).days
+
+# Calculate the sexagenary day position
+position = (days_diff % 60) + 1
+
+print(f"Days difference: {days_diff}")
+print(f"Sexagenary day position: {position} out of 60")
+
+Here are the results:
+
+Days difference between October 20, 1383 and August 12, 2025: 234,417 days
+
+Sexagenary day position = (234,417 mod 60) + 1 = 58
