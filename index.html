@@ -521,6 +521,41 @@
             container.innerHTML = html;
         }
 
+        function timeStringToMinutes(timeString) {
+            if (!timeString || timeString === 'N/A') return 0;
+            const [hours, minutes] = timeString.split(':').map(Number);
+            return (hours * 60) + (minutes || 0);
+        }
+
+        function formatSolarDisplay(astronomyData) {
+            if (!astronomyData.sunrise || astronomyData.sunrise === 'N/A') {
+                return 'Solar data calculating...';
+            }
+            
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            const sunriseMinutes = timeStringToMinutes(astronomyData.sunrise);
+            const sunsetMinutes = timeStringToMinutes(astronomyData.sunset);
+            const solarNoonMinutes = timeStringToMinutes(astronomyData.solarNoon);
+            
+            let solarPhase;
+            if (currentMinutes < sunriseMinutes) {
+                solarPhase = '🌙 Pre-Dawn (Yin Dominance)';
+            } else if (currentMinutes <= sunriseMinutes + 120) {
+                solarPhase = '🌅 Morning Qi Rising';
+            } else if (Math.abs(currentMinutes - solarNoonMinutes) <= 60) {
+                solarPhase = '☀️ Solar Noon (Peak Yang)';
+            } else if (currentMinutes <= sunsetMinutes) {
+                solarPhase = '🌤️ Daytime Yang Energy';
+            } else if (currentMinutes <= sunsetMinutes + 120) {
+                solarPhase = '🌇 Evening Transition';
+            } else {
+                solarPhase = '🌙 Night Yin Energy';
+            }
+            
+            return `${solarPhase} | Rise: ${astronomyData.sunrise} | Set: ${astronomyData.sunset} | Day: ${astronomyData.dayLength}`;
+        }
+
         function updateQiField() {
             const now = new Date();
             const currentHour = now.getHours();
