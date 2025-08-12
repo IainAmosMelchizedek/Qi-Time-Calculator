@@ -1,0 +1,116 @@
+function updateQiField() {
+            const now = new Date();
+            
+            // Use corrected traditional calculations
+            const qiData = calculateTraditionalQiStrength(selectedConstitution, now);
+            const sexDay = calculateSexagenaryDay(now);
+            const sexInfo = getSexagenaryComponents(sexDay);
+            const lunarInfo = calculateTraditionalLunar(now);
+            
+            // Update displays with traditional data
+            document.getElementById('qiStrength').textContent = qiData.qiStrength + '%';
+            document.getElementById('qiTrend').textContent = qiData.qiStrength > 70 ? '↗ Rising' : 
+                                                           qiData.qiStrength > 40 ? '→ Stable' : '↘ Declining';
+            
+            // Update qi field visualization
+            const qiField = document.getElementById('qiField');
+            const strength = qiData.qiStrength / 100;
+                    // CORRECTED Traditional Chinese chronoacupuncture time calculations
+        // Based on Slopek & Feng 2009 research + traditional Zi Wu Liu Zhu methods
+        
+        // Sexagenary cycle calculation (foundation of all traditional timing)
+        function calculateSexagenaryDay(date) {
+            const referenceDate = new Date(2000, 0, 1);
+            const referenceDay = 37; // gengzi reference point
+            const daysDiff = Math.floor((date - referenceDate) / (1000 * 60 * 60 * 24));
+            return ((referenceDay + daysDiff - 1) % 60) + 1;
+        }
+
+        const heavenlyStems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+        const earthlyBranches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+
+        function getSexagenaryComponents(sexDay) {
+            const stemIndex = (sexDay - 1) % 10;
+            const branchIndex = (sexDay - 1) % 12;
+            return {
+                day: sexDay,
+                stem: heavenlyStems[stemIndex],
+                branch: earthlyBranches[branchIndex],
+                stemIndex: stemIndex,
+                branchIndex: branchIndex
+            };
+        }
+
+        // Traditional lunar month calculation (from Martzloff)
+        function calculateTraditionalLunar(date) {
+            const synodicMonth = 29.530593; // Traditional Chinese astronomical value
+            const referenceNewMoon = new Date(2000, 0, 6);
+            const daysDiff = (date - referenceNewMoon) / (1000 * 60 * 60 * 24);
+            const positionInMonth = (daysDiff % synodicMonth + synodicMonth) % synodicMonth;
+            
+            return {
+                age: Math.floor(positionInMonth),
+                position: positionInMonth,
+                illumination: 0.5 * (1 - Math.cos((positionInMonth / synodicMonth) * 2 * Math.PI)),
+                isFullMoon: Math.abs(positionInMonth - synodicMonth/2) < 1.5,
+                isNewMoon: positionInMonth < 1.5 || positionInMonth > (synodicMonth - 1.5)
+            };
+        }
+
+        const constitutionTimings = {
+            Wood: {
+                organs: [
+                    { name: 'Liver', time: [1, 3], branch: 1 },      // 丑 (1-3 AM)
+                    { name: 'Gallbladder', time: [23, 1], branch: 0 } // 子 (11 PM-1 AM)
+                ],
+                favorableBranches: [0, 1, 2], // 子丑寅 (Wood branches)
+                element: 'Wood',
+                qiCharacteristics: 'Rising, expanding, planning energy',
+                optimalSeasons: ['Spring'],
+                magneticPolarity: 'Yang-rising'
+            },
+            Fire: {
+                organs: [
+                    { name: 'Heart', time: [11, 13], branch: 6 },          // 午 (11 AM-1 PM)
+                    { name: 'Small Intestine', time: [13, 15], branch: 7 } // 未 (1-3 PM)
+                ],
+                favorableBranches: [6, 7], // 午未 (Fire branches)
+                element: 'Fire', 
+                qiCharacteristics: 'Maximum yang, emotional processing',
+                optimalSeasons: ['Summer'],
+                magneticPolarity: 'Pure Yang'
+            },
+            Earth: {
+                organs: [
+                    { name: 'Stomach', time: [7, 9], branch: 4 },   // 辰 (7-9 AM)
+                    { name: 'Spleen', time: [9, 11], branch: 5 }    // 巳 (9-11 AM)
+                ],
+                favorableBranches: [4, 5, 8, 11], // 辰巳申戌 (Earth branches)
+                element: 'Earth',
+                qiCharacteristics: 'Stable, nourishing, grounding',
+                optimalSeasons: ['Late Summer'],
+                magneticPolarity: 'Balanced'
+            },
+            Metal: {
+                organs: [
+                    { name: 'Lung', time: [3, 5], branch: 2 },           // 寅 (3-5 AM)
+                    { name: 'Large Intestine', time: [5, 7], branch: 3 } // 卯 (5-7 AM)
+                ],
+                favorableBranches: [2, 3], // 寅卯 (Metal branches)
+                element: 'Metal',
+                qiCharacteristics: 'Contracting, releasing, purifying',
+                optimalSeasons: ['Autumn'],
+                magneticPolarity: 'Yang-descending'
+            },
+            Water: {
+                organs: [
+                    { name: 'Bladder', time: [15, 17], branch: 8 },  // 申 (3-5 PM)
+                    { name: 'Kidney', time: [17, 19], branch: 9 }    // 酉 (5-7 PM)
+                ],
+                favorableBranches: [8, 9], // 申酉 (Water branches)
+                element: 'Water',
+                qiCharacteristics: 'Deep essence, willpower, storage',
+                optimalSeasons: ['Winter'],
+                magneticPolarity: 'Pure Yin'
+            }
+        };
