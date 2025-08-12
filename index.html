@@ -399,7 +399,60 @@
                 </div>
             </div>
 
-            <!-- CONSTITUTIONAL TYPE SELECTION -->
+            <!-- EDUCATIONAL EXPLANATION SECTION -->
+            <div class="qi-section">
+                <h3 class="section-title">Understanding Traditional Chinese Time System</h3>
+                <div class="methodology-box">
+                    <h4 style="margin-bottom: 15px; color: #27ae60;">What is the Sexagenary Cycle?</h4>
+                    <p style="margin-bottom: 15px;">
+                        The <strong>Sexagenary Cycle (六十甲子)</strong> is a 60-day cycle that has run continuously in China for over 3,000 years. 
+                        Every day gets a unique combination of a <strong>Heavenly Stem</strong> + <strong>Earthly Branch</strong>.
+                    </p>
+                    
+                    <h4 style="margin-bottom: 10px; color: #27ae60;">Heavenly Stems (天干) - Cosmic Influences:</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px;">
+                        <div>甲 (jiǎ) = Yang Wood</div>
+                        <div>乙 (yǐ) = Yin Wood</div>
+                        <div>丙 (bǐng) = Yang Fire</div>
+                        <div>丁 (dīng) = Yin Fire</div>
+                        <div>戊 (wù) = Yang Earth</div>
+                        <div>己 (jǐ) = Yin Earth</div>
+                        <div>庚 (gēng) = Yang Metal</div>
+                        <div>辛 (xīn) = Yin Metal</div>
+                        <div>壬 (rén) = Yang Water</div>
+                        <div>癸 (guǐ) = Yin Water</div>
+                    </div>
+                    
+                    <h4 style="margin-bottom: 10px; color: #27ae60;">Earthly Branches (地支) - Time & Animal Influences:</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin-bottom: 15px;">
+                        <div>子 (zǐ) = Rat (11 PM-1 AM)</div>
+                        <div>丑 (chǒu) = Ox (1-3 AM)</div>
+                        <div>寅 (yín) = Tiger (3-5 AM)</div>
+                        <div>卯 (mǎo) = Rabbit (5-7 AM)</div>
+                        <div>辰 (chén) = Dragon (7-9 AM)</div>
+                        <div>巳 (sì) = Snake (9-11 AM)</div>
+                        <div>午 (wǔ) = Horse (11 AM-1 PM)</div>
+                        <div>未 (wèi) = Goat (1-3 PM)</div>
+                        <div>申 (shēn) = Monkey (3-5 PM)</div>
+                        <div>酉 (yǒu) = Rooster (5-7 PM)</div>
+                        <div>戌 (xū) = Dog (7-9 PM)</div>
+                        <div>亥 (hài) = Pig (9-11 PM)</div>
+                    </div>
+                    
+                    <h4 style="margin-bottom: 10px; color: #27ae60;">What Makes a Day "Favorable"?</h4>
+                    <p style="margin-bottom: 10px;">A day is favorable when the Earthly Branch matches your constitutional element:</p>
+                    <ul style="margin-left: 20px; line-height: 1.6;">
+                        <li><strong>Wood Constitution:</strong> Favorable on Rat, Ox, Tiger days (子丑寅)</li>
+                        <li><strong>Fire Constitution:</strong> Favorable on Horse, Goat days (午未)</li>
+                        <li><strong>Earth Constitution:</strong> Favorable on Dragon, Snake, Monkey, Dog days (辰巳申戌)</li>
+                        <li><strong>Metal Constitution:</strong> Favorable on Tiger, Rabbit days (寅卯)</li>
+                        <li><strong>Water Constitution:</strong> Favorable on Monkey, Rooster days (申酉)</li>
+                    </ul>
+                    <p style="margin-top: 15px; font-style: italic;">
+                        On favorable days, your constitutional qi receives a 30% natural boost, making treatments more effective.
+                    </p>
+                </div>
+            </div>
             <div class="qi-section">
                 <h3 class="section-title">Constitutional Qi Type Selection</h3>
                 <p style="margin-bottom: 20px; font-style: italic;">Select your primary constitutional type to calculate optimal qi flow times:</p>
@@ -431,12 +484,12 @@
                     Live visualization of bio-electromagnetic qi field strength for <span id="selectedElement">Wood</span> constitution based on traditional astronomical calculations:
                 </p>
                 
-                <!-- Sexagenary cycle information display -->
+                <!-- Sexagenary cycle information display with educational tooltips -->
                 <div class="sexagenary-display">
                     <strong>Sexagenary Day:</strong> <span id="sexagenaryDay">Loading...</span> | 
-                    <strong>Heavenly Stem:</strong> <span id="heavenlyStem">--</span> | 
-                    <strong>Earthly Branch:</strong> <span id="earthlyBranch">--</span><br>
-                    <strong>Favorable Day:</strong> <span id="favorableDay">Calculating...</span> | 
+                    <strong>Heavenly Stem:</strong> <span id="heavenlyStem">--</span> <span id="stemMeaning" style="font-size: 0.9em; color: #666;">(Cosmic Influence)</span> | 
+                    <strong>Earthly Branch:</strong> <span id="earthlyBranch">--</span> <span id="branchMeaning" style="font-size: 0.9em; color: #666;">(Time Animal)</span><br>
+                    <strong>Favorable Day:</strong> <span id="favorableDay">Calculating...</span> <span id="favorableExplanation" style="font-size: 0.9em; color: #666;"></span> | 
                     <strong>Organ Peak Time:</strong> <span id="organPeakTime">Calculating...</span>
                 </div>
                 
@@ -925,13 +978,53 @@
                                                                qiData.qiStrength > 40 ? 'Stable' : 'Low Energy';
                 
                 // ===================================================================
-                // UPDATE SEXAGENARY CYCLE DISPLAYS
+                // UPDATE SEXAGENARY CYCLE DISPLAYS WITH EDUCATIONAL INFO
                 // ===================================================================
                 
                 document.getElementById('sexagenaryDay').textContent = `Day ${qiData.sexagenaryDay}/60`;
                 document.getElementById('heavenlyStem').textContent = sexInfo.stem;
                 document.getElementById('earthlyBranch').textContent = sexInfo.branch;
+                
+                // Add educational explanations for the symbols
+                const stemMeanings = {
+                    '甲': 'Yang Wood (Growth Energy)',
+                    '乙': 'Yin Wood (Gentle Growth)',
+                    '丙': 'Yang Fire (Active Heat)',
+                    '丁': 'Yin Fire (Gentle Warmth)',
+                    '戊': 'Yang Earth (Mountain Stability)',
+                    '己': 'Yin Earth (Fertile Ground)',
+                    '庚': 'Yang Metal (Sharp Strength)',
+                    '辛': 'Yin Metal (Refined Metal)',
+                    '壬': 'Yang Water (Ocean Flow)',
+                    '癸': 'Yin Water (Rain/Dew)'
+                };
+                
+                const branchMeanings = {
+                    '子': 'Rat (11 PM-1 AM, Deep Night)',
+                    '丑': 'Ox (1-3 AM, Pre-Dawn)',
+                    '寅': 'Tiger (3-5 AM, Early Dawn)',
+                    '卯': 'Rabbit (5-7 AM, Sunrise)',
+                    '辰': 'Dragon (7-9 AM, Morning)',
+                    '巳': 'Snake (9-11 AM, Late Morning)',
+                    '午': 'Horse (11 AM-1 PM, Midday)',
+                    '未': 'Goat (1-3 PM, Early Afternoon)',
+                    '申': 'Monkey (3-5 PM, Afternoon)',
+                    '酉': 'Rooster (5-7 PM, Evening)',
+                    '戌': 'Dog (7-9 PM, Twilight)',
+                    '亥': 'Pig (9-11 PM, Night)'
+                };
+                
+                document.getElementById('stemMeaning').textContent = `(${stemMeanings[sexInfo.stem] || 'Cosmic Influence'})`;
+                document.getElementById('branchMeaning').textContent = `(${branchMeanings[sexInfo.branch] || 'Time Animal'})`;
+                
+                // Explain favorable day status
                 document.getElementById('favorableDay').textContent = qiData.isFavorableDay ? 'YES' : 'No';
+                
+                const favorableExplanation = qiData.isFavorableDay ? 
+                    `(${sexInfo.branch} enhances ${selectedConstitution} qi)` : 
+                    `(${sexInfo.branch} neutral for ${selectedConstitution})`;
+                document.getElementById('favorableExplanation').textContent = favorableExplanation;
+                
                 document.getElementById('organPeakTime').textContent = qiData.isOrganPeakTime ? 'YES - OPTIMAL NOW' : 'No';
                 
                 // ===================================================================
