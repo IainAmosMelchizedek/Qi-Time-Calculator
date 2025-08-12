@@ -543,6 +543,9 @@
                 
                 updateLunarBoostDisplay(window.currentLunarData);
                 updateSolarBoostDisplay(solarMultiplier);
+                
+                // Update solar display every time qi field updates
+                document.getElementById('solarData').textContent = formatSolarDisplay(window.currentLunarData);
             }
             
             // Update qi field visualization
